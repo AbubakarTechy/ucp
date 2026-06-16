@@ -11,7 +11,7 @@ function getDbPath() {
 
   if (process.env.VERCEL) {
     const tmpDbPath = '/tmp/campusnotes.db';
-    const seedDbPath = path.join(__dirname, 'data', 'campusnotes.db');
+    const seedDbPath = path.join(process.cwd(), 'server', 'data', 'campusnotes.db');
 
     if (!fs.existsSync(tmpDbPath)) {
       try {
