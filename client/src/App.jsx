@@ -45,7 +45,12 @@ const AppLayout = () => {
         </Routes>
       </main>
 
-      {showPricingSection && <PricingSection showHeader={false} />}
+      {showPricingSection && (
+        <>
+          <PricingSection showHeader={false} />
+          <div className="h-10 w-20" />
+        </>
+      )}
 
       {!isAdminLoginPage && (
         <footer className="bg-slate-900 text-slate-400 py-12 px-4 sm:px-6 lg:px-8 border-t border-slate-800">
