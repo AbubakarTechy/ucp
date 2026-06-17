@@ -41,7 +41,7 @@ const saveBufferLocally = (buffer, originalname) => {
 exports.getNotes = async (req, res) => {
   try {
     const { sort, limit } = req.query;
-    const notes = Note.getAllNotes({ sort, limit });
+    const notes = await Note.getAllNotes({ sort, limit });
     res.status(200).json(notes);
   } catch (error) {
     console.error('Error fetching notes:', error);
@@ -51,7 +51,7 @@ exports.getNotes = async (req, res) => {
 
 exports.getNoteById = async (req, res) => {
   try {
-    const note = Note.getNoteById(req.params.id);
+    const note = await Note.getNoteById(req.params.id);
     if (!note) {
       return res.status(404).json({ message: 'Note not found.' });
     }
@@ -104,7 +104,7 @@ exports.uploadNote = async (req, res) => {
       fileUrl = '/api/notes/db/file';
     }
 
-    const newNote = Note.createNote({
+    const newNote = await Note.createNote({
       title,
       subject,
       semester,
@@ -134,7 +134,7 @@ exports.getMyNotes = async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
     }
 
-    const notes = Note.getNotesByUploaderEmail(req.user.email);
+    const notes = await Note.getNotesByUploaderEmail(req.user.email);
     const totalDownloads = notes.reduce((sum, note) => sum + note.downloads, 0);
 
     res.status(200).json({
@@ -153,7 +153,7 @@ exports.getMyNotes = async (req, res) => {
 exports.searchNotes = async (req, res) => {
   try {
     const query = req.query.q || '';
-    const notes = Note.searchNotes(query);
+    const notes = await Note.searchNotes(query);
     res.status(200).json(notes);
   } catch (error) {
     console.error('Error searching notes:', error);
@@ -170,7 +170,7 @@ exports.getNotesBySemester = async (req, res) => {
       return res.status(400).json({ message: 'Invalid semester. Allowed semesters are 1st to 8th.' });
     }
 
-    const notes = Note.getNotesBySemester(semester);
+    const notes = await Note.getNotesBySemester(semester);
     res.status(200).json(notes);
   } catch (error) {
     console.error('Error fetching notes by semester:', error);
@@ -180,12 +180,12 @@ exports.getNotesBySemester = async (req, res) => {
 
 exports.incrementDownloads = async (req, res) => {
   try {
-    const note = Note.getNoteById(req.params.id);
+    const note = await Note.getNoteById(req.params.id);
     if (!note) {
       return res.status(404).json({ message: 'Note not found.' });
     }
 
-    const user = User.findUserById(req.user.id);
+    const user = await User.findUserById(req.user.id);
     if (!user) {
       return res.status(401).json({ message: 'User profile not found. Please log in again.' });
     }
@@ -210,11 +210,11 @@ exports.incrementDownloads = async (req, res) => {
       });
     }
 
-    const updatedUser = User.updateUser(req.user.id, {
+    const updatedUser = await User.updateUser(req.user.id, {
       downloadsCount: user.downloadsCount + 1
     });
 
-    const updatedNote = Note.incrementNoteDownloads(req.params.id);
+    const updatedNote = await Note.incrementNoteDownloads(req.params.id);
 
     res.status(200).json({
       downloads: updatedNote.downloads,
@@ -229,7 +229,7 @@ exports.incrementDownloads = async (req, res) => {
 
 exports.serveNoteFile = async (req, res) => {
   try {
-    const note = Note.getNoteById(req.params.id);
+    const note = await Note.getNoteById(req.params.id);
     if (!note) {
       return res.status(404).json({ message: 'Note not found.' });
     }
@@ -259,8 +259,8 @@ exports.serveNoteFile = async (req, res) => {
       }
     }
 
-    // Fallback: Try serving from SQLite database BLOB
-    const dbFileData = Note.getNoteFileData(req.params.id);
+    // Fallback: Try serving from database BYTEA/BLOB
+    const dbFileData = await Note.getNoteFileData(req.params.id);
     if (dbFileData) {
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `inline; filename="${safeTitle}.pdf"`);
@@ -282,7 +282,7 @@ exports.deleteNote = async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
     }
 
-    const note = Note.getNoteById(req.params.id);
+    const note = await Note.getNoteById(req.params.id);
     if (!note) {
       return res.status(404).json({ message: 'Note not found.' });
     }
@@ -306,7 +306,7 @@ exports.deleteNote = async (req, res) => {
       }
     }
 
-    Note.deleteNoteById(req.params.id);
+    await Note.deleteNoteById(req.params.id);
     res.status(200).json({ message: 'Document deleted successfully.' });
   } catch (error) {
     console.error('Error in deleteNote controller:', error);

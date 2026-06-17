@@ -24,8 +24,8 @@ const formatNote = (row) => {
 
 const SELECT_FIELDS = 'id, title, subject, semester, type, file_url, cloudinary_url, local_filename, uploaded_by, uploaded_by_email, downloads, created_at';
 
-const getAllNotes = ({ sort = 'latest', limit } = {}) => {
-  const db = connectDB();
+const getAllNotes = async ({ sort = 'latest', limit } = {}) => {
+  const pool = await connectDB();
   let orderBy = 'created_at DESC';
 
   if (sort === 'downloads') {
@@ -36,27 +36,27 @@ const getAllNotes = ({ sort = 'latest', limit } = {}) => {
   const params = [];
 
   if (limit) {
-    sql += ' LIMIT ?';
+    sql += ' LIMIT $1';
     params.push(parseInt(limit, 10));
   }
 
-  const rows = db.prepare(sql).all(...params);
-  return rows.map(formatNote);
+  const res = await pool.query(sql, params);
+  return res.rows.map(formatNote);
 };
 
-const getNoteById = (id) => {
-  const db = connectDB();
-  const row = db.prepare(`SELECT ${SELECT_FIELDS} FROM notes WHERE id = ?`).get(Number(id));
-  return formatNote(row);
+const getNoteById = async (id) => {
+  const pool = await connectDB();
+  const res = await pool.query(`SELECT ${SELECT_FIELDS} FROM notes WHERE id = $1`, [Number(id)]);
+  return formatNote(res.rows[0]);
 };
 
-const getNoteFileData = (id) => {
-  const db = connectDB();
-  const row = db.prepare('SELECT file_data FROM notes WHERE id = ?').get(Number(id));
-  return row ? row.file_data : null;
+const getNoteFileData = async (id) => {
+  const pool = await connectDB();
+  const res = await pool.query('SELECT file_data FROM notes WHERE id = $1', [Number(id)]);
+  return res.rows[0] ? res.rows[0].file_data : null;
 };
 
-const createNote = ({
+const createNote = async ({
   title,
   subject,
   semester,
@@ -69,80 +69,71 @@ const createNote = ({
   downloads = 0,
   fileData = null
 }) => {
-  const db = connectDB();
-  const result = db
-    .prepare(`
-      INSERT INTO notes (
-        title, subject, semester, type, file_url, cloudinary_url, local_filename,
-        uploaded_by, uploaded_by_email, downloads, file_data
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `)
-    .run(
-      title,
-      subject,
-      semester,
-      type,
-      fileUrl,
-      cloudinaryUrl,
-      localFilename,
-      uploadedBy,
-      uploadedByEmail.toLowerCase(),
-      downloads,
-      fileData
-    );
+  const pool = await connectDB();
+  const res = await pool.query(`
+    INSERT INTO notes (
+      title, subject, semester, type, file_url, cloudinary_url, local_filename,
+      uploaded_by, uploaded_by_email, downloads, file_data
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    RETURNING id
+  `, [
+    title,
+    subject,
+    semester,
+    type,
+    fileUrl,
+    cloudinaryUrl,
+    localFilename,
+    uploadedBy,
+    uploadedByEmail.toLowerCase(),
+    downloads,
+    fileData
+  ]);
 
-  const newId = result.lastInsertRowid;
+  const newId = res.rows[0].id;
   if (fileUrl === '/api/notes/db/file') {
     const realFileUrl = `/api/notes/${newId}/file`;
-    db.prepare('UPDATE notes SET file_url = ? WHERE id = ?').run(realFileUrl, newId);
+    await pool.query('UPDATE notes SET file_url = $1 WHERE id = $2', [realFileUrl, newId]);
   }
 
   return getNoteById(newId);
 };
 
-const searchNotes = (query) => {
-  const db = connectDB();
+const searchNotes = async (query) => {
+  const pool = await connectDB();
   const pattern = `%${query}%`;
-  const rows = db
-    .prepare(`
-      SELECT ${SELECT_FIELDS} FROM notes
-      WHERE title LIKE ? COLLATE NOCASE OR subject LIKE ? COLLATE NOCASE
-      ORDER BY created_at DESC
-    `)
-    .all(pattern, pattern);
+  const res = await pool.query(`
+    SELECT ${SELECT_FIELDS} FROM notes
+    WHERE title ILIKE $1 OR subject ILIKE $2
+    ORDER BY created_at DESC
+  `, [pattern, pattern]);
 
-  return rows.map(formatNote);
+  return res.rows.map(formatNote);
 };
 
-const getNotesBySemester = (semester) => {
-  const db = connectDB();
-  const rows = db
-    .prepare(`SELECT ${SELECT_FIELDS} FROM notes WHERE semester = ? ORDER BY created_at DESC`)
-    .all(semester);
-
-  return rows.map(formatNote);
+const getNotesBySemester = async (semester) => {
+  const pool = await connectDB();
+  const res = await pool.query(`SELECT ${SELECT_FIELDS} FROM notes WHERE semester = $1 ORDER BY created_at DESC`, [semester]);
+  return res.rows.map(formatNote);
 };
 
-const getNotesByUploaderEmail = (email) => {
-  const db = connectDB();
-  const rows = db
-    .prepare(`SELECT ${SELECT_FIELDS} FROM notes WHERE uploaded_by_email = ? ORDER BY created_at DESC`)
-    .all(email.toLowerCase());
-
-  return rows.map(formatNote);
+const getNotesByUploaderEmail = async (email) => {
+  const pool = await connectDB();
+  const res = await pool.query(`SELECT ${SELECT_FIELDS} FROM notes WHERE uploaded_by_email = $1 ORDER BY created_at DESC`, [email.toLowerCase()]);
+  return res.rows.map(formatNote);
 };
 
-const incrementNoteDownloads = (id) => {
-  const db = connectDB();
-  db.prepare('UPDATE notes SET downloads = downloads + 1 WHERE id = ?').run(Number(id));
+const incrementNoteDownloads = async (id) => {
+  const pool = await connectDB();
+  await pool.query('UPDATE notes SET downloads = downloads + 1 WHERE id = $1', [Number(id)]);
   return getNoteById(id);
 };
 
-const deleteNoteById = (id) => {
-  const db = connectDB();
-  const result = db.prepare('DELETE FROM notes WHERE id = ?').run(Number(id));
-  return result.changes > 0;
+const deleteNoteById = async (id) => {
+  const pool = await connectDB();
+  const res = await pool.query('DELETE FROM notes WHERE id = $1', [Number(id)]);
+  return res.rowCount > 0;
 };
 
 module.exports = {

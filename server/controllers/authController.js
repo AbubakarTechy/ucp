@@ -69,14 +69,14 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
     }
 
-    const existingUser = User.findUserByEmail(email);
+    const existingUser = await User.findUserByEmail(email);
     if (existingUser) {
       return res.status(400).json({ message: 'An account with this email already exists. Please log in.' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = User.createUser({
+    const user = await User.createUser({
       name: name.trim(),
       email: email.toLowerCase().trim(),
       password: hashedPassword,
@@ -109,7 +109,7 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Please provide a valid email address.' });
     }
 
-    const user = User.findUserByEmail(email, true);
+    const user = await User.findUserByEmail(email, true);
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password. Please register first.' });
     }
@@ -180,7 +180,7 @@ exports.getProfile = async (req, res) => {
       });
     }
 
-    const user = User.findUserById(req.user.id);
+    const user = await User.findUserById(req.user.id);
     if (!user) {
       return res.status(404).json({ message: 'User not found.' });
     }
@@ -204,12 +204,12 @@ exports.upgradePlan = async (req, res) => {
 
     const normalizedPlan = plan === 'Free' ? 'Basic' : plan;
 
-    const user = User.findUserById(req.user.id);
+    const user = await User.findUserById(req.user.id);
     if (!user) {
       return res.status(404).json({ message: 'User not found.' });
     }
 
-    const updatedUser = User.updateUser(req.user.id, {
+    const updatedUser = await User.updateUser(req.user.id, {
       plan: normalizedPlan,
       downloadsCount: 0
     });
@@ -229,7 +229,7 @@ exports.upgradePlan = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = User.getAllUsers();
+    const users = await User.getAllUsers();
     res.status(200).json(users);
   } catch (error) {
     console.error('Error in getAllUsers controller:', error);
@@ -259,7 +259,7 @@ exports.googleLogin = async (req, res) => {
       return res.status(400).json({ message: 'Google account email is required.' });
     }
 
-    let user = User.findUserByGoogleIdOrEmail(googleId, email);
+    let user = await User.findUserByGoogleIdOrEmail(googleId, email);
 
     if (user) {
       const updates = {};
@@ -272,10 +272,10 @@ exports.googleLogin = async (req, res) => {
       }
 
       if (Object.keys(updates).length > 0) {
-        user = User.updateUser(user._id, updates);
+        user = await User.updateUser(user._id, updates);
       }
     } else {
-      user = User.createUser({
+      user = await User.createUser({
         name: name || email.split('@')[0],
         email: email.toLowerCase(),
         googleId,

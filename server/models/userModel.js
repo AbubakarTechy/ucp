@@ -21,10 +21,10 @@ const formatUser = (row) => {
   };
 };
 
-const findUserByEmail = (email, includePassword = false) => {
-  const db = connectDB();
-  const row = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
-  const user = formatUser(row);
+const findUserByEmail = async (email, includePassword = false) => {
+  const pool = await connectDB();
+  const res = await pool.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
+  const user = formatUser(res.rows[0]);
 
   if (user && !includePassword) {
     delete user.password;
@@ -33,10 +33,10 @@ const findUserByEmail = (email, includePassword = false) => {
   return user;
 };
 
-const findUserById = (id) => {
-  const db = connectDB();
-  const row = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(id));
-  const user = formatUser(row);
+const findUserById = async (id) => {
+  const pool = await connectDB();
+  const res = await pool.query('SELECT * FROM users WHERE id = $1', [Number(id)]);
+  const user = formatUser(res.rows[0]);
 
   if (user) {
     delete user.password;
@@ -45,13 +45,10 @@ const findUserById = (id) => {
   return user;
 };
 
-const findUserByGoogleIdOrEmail = (googleId, email) => {
-  const db = connectDB();
-  const row = db
-    .prepare('SELECT * FROM users WHERE google_id = ? OR email = ?')
-    .get(googleId, email.toLowerCase());
-
-  const user = formatUser(row);
+const findUserByGoogleIdOrEmail = async (googleId, email) => {
+  const pool = await connectDB();
+  const res = await pool.query('SELECT * FROM users WHERE google_id = $1 OR email = $2', [googleId, email.toLowerCase()]);
+  const user = formatUser(res.rows[0]);
   if (user) {
     delete user.password;
   }
@@ -59,7 +56,7 @@ const findUserByGoogleIdOrEmail = (googleId, email) => {
   return user;
 };
 
-const createUser = ({
+const createUser = async ({
   name,
   email,
   password = null,
@@ -69,28 +66,27 @@ const createUser = ({
   plan = 'Basic',
   downloadsCount = 0
 }) => {
-  const db = connectDB();
-  const result = db
-    .prepare(`
-      INSERT INTO users (name, email, password, google_id, auth_provider, profile_pic, plan, downloads_count)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `)
-    .run(
-      name.trim(),
-      email.toLowerCase().trim(),
-      password,
-      googleId,
-      authProvider,
-      profilePic,
-      plan,
-      downloadsCount
-    );
+  const pool = await connectDB();
+  const res = await pool.query(`
+    INSERT INTO users (name, email, password, google_id, auth_provider, profile_pic, plan, downloads_count)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING id
+  `, [
+    name.trim(),
+    email.toLowerCase().trim(),
+    password,
+    googleId,
+    authProvider,
+    profilePic,
+    plan,
+    downloadsCount
+  ]);
 
-  return findUserById(result.lastInsertRowid);
+  return findUserById(res.rows[0].id);
 };
 
-const updateUser = (id, fields) => {
-  const db = connectDB();
+const updateUser = async (id, fields) => {
+  const pool = await connectDB();
   const allowedFields = {
     name: 'name',
     email: 'email',
@@ -104,12 +100,14 @@ const updateUser = (id, fields) => {
 
   const updates = [];
   const values = [];
+  let paramCount = 1;
 
   Object.entries(fields).forEach(([key, value]) => {
     const column = allowedFields[key];
     if (column !== undefined) {
-      updates.push(`${column} = ?`);
+      updates.push(`${column} = $${paramCount}`);
       values.push(value);
+      paramCount++;
     }
   });
 
@@ -118,15 +116,15 @@ const updateUser = (id, fields) => {
   }
 
   values.push(Number(id));
-  db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+  await pool.query(`UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount}`, values);
 
   return findUserById(id);
 };
 
-const getAllUsers = () => {
-  const db = connectDB();
-  const rows = db.prepare('SELECT * FROM users ORDER BY created_at DESC').all();
-  return rows.map((row) => {
+const getAllUsers = async () => {
+  const pool = await connectDB();
+  const res = await pool.query('SELECT * FROM users ORDER BY created_at DESC');
+  return res.rows.map((row) => {
     const user = formatUser(row);
     delete user.password;
     return user;
