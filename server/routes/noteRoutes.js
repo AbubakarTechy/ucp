@@ -7,10 +7,20 @@ const noteController = require('../controllers/noteController');
 const authMiddleware = require('../middleware/authMiddleware');
 
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype === 'application/pdf' || path.extname(file.originalname).toLowerCase() === '.pdf') {
+  const allowedExts = ['.pdf', '.doc', '.docx', '.ppt', '.pptx'];
+  const ext = path.extname(file.originalname).toLowerCase();
+  const allowedMimes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+  ];
+
+  if (allowedExts.includes(ext) || allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only PDF files are allowed.'), false);
+    cb(new Error('Invalid file type. Only PDF, Word, and PowerPoint files are allowed.'), false);
   }
 };
 

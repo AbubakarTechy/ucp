@@ -154,7 +154,7 @@ const SingleNote = () => {
               </div>
 
               <div className="relative rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 h-[650px]">
-                {note.fileUrl ? (
+                {note.fileUrl && !/\.(docx|doc|pptx|ppt)$/i.test(note.fileUrl) ? (
                   <iframe
                     src={`${getNoteFileUrl(note._id)}#toolbar=0`}
                     title={note.title}
@@ -166,7 +166,9 @@ const SingleNote = () => {
                   <div className="flex flex-col items-center justify-center h-full p-8 text-center">
                     <FileText className="h-16 w-16 text-slate-300 mb-3" />
                     <p className="text-slate-500 font-bold text-sm">Preview Unavailable</p>
-                    <p className="text-slate-400 text-xs mt-1">This PDF document cannot be previewed in this browser.</p>
+                    <p className="text-slate-400 text-xs mt-1">
+                      {note.fileUrl ? 'Preview is not supported for Word or PowerPoint files in the browser. Please download the document to view its contents.' : 'This document cannot be previewed in this browser.'}
+                    </p>
                   </div>
                 )}
               </div>

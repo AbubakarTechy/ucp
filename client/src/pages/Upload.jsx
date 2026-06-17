@@ -68,11 +68,13 @@ const Upload = () => {
     }
   };
 
-  // Validate that file is a PDF and under 10MB
+  // Validate that file is a PDF, Word, or PowerPoint document under 10MB
   const validateAndSetFile = (selectedFile) => {
     setError(null);
-    if (selectedFile.type !== 'application/pdf' && !selectedFile.name.toLowerCase().endsWith('.pdf')) {
-      setError('Only PDF documents are allowed.');
+    const allowedExtensions = ['.pdf', '.doc', '.docx', '.ppt', '.pptx'];
+    const ext = '.' + selectedFile.name.split('.').pop().toLowerCase();
+    if (!allowedExtensions.includes(ext)) {
+      setError('Only PDF, Word (.doc, .docx), and PowerPoint (.ppt, .pptx) documents are allowed.');
       return;
     }
     if (selectedFile.size > 10 * 1024 * 1024) {
@@ -171,9 +173,9 @@ const Upload = () => {
             </div>
           )}
 
-          {/* PDF File Drag & Drop */}
+          {/* File Drag & Drop */}
           <div className="space-y-2">
-            <label className="text-xs font-extrabold text-slate-500 uppercase tracking-wider block">Select PDF Document</label>
+            <label className="text-xs font-extrabold text-slate-500 uppercase tracking-wider block">Select Study Document</label>
             
             {!file ? (
               <div
@@ -192,12 +194,12 @@ const Upload = () => {
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileChange}
-                  accept=".pdf"
+                  accept=".pdf,.doc,.docx,.ppt,.pptx"
                   className="hidden"
                 />
                 <FileText className="h-12 w-12 text-slate-400 mx-auto mb-3" />
-                <p className="text-slate-700 font-bold text-sm">Drag & drop your PDF file here</p>
-                <p className="text-slate-400 text-xs mt-1">or click to browse from files (Max 10MB)</p>
+                <p className="text-slate-700 font-bold text-sm">Drag & drop your document file here</p>
+                <p className="text-slate-400 text-xs mt-1">Accepts PDF, Word, and PowerPoint (Max 10MB)</p>
               </div>
             ) : (
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between">

@@ -227,6 +227,17 @@ exports.incrementDownloads = async (req, res) => {
   }
 };
 
+const getMimeTypeAndExt = (filename) => {
+  const ext = path.extname(filename || '').toLowerCase() || '.pdf';
+  let mimeType = 'application/octet-stream';
+  if (ext === '.pdf') mimeType = 'application/pdf';
+  else if (ext === '.doc') mimeType = 'application/msword';
+  else if (ext === '.docx') mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  else if (ext === '.ppt') mimeType = 'application/vnd.ms-powerpoint';
+  else if (ext === '.pptx') mimeType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+  return { mimeType, ext };
+};
+
 exports.serveNoteFile = async (req, res) => {
   try {
     const note = await Note.getNoteById(req.params.id);
@@ -234,6 +245,7 @@ exports.serveNoteFile = async (req, res) => {
       return res.status(404).json({ message: 'Note not found.' });
     }
 
+    const { mimeType, ext } = getMimeTypeAndExt(note.localFilename || note.fileUrl || note.cloudinaryUrl);
     const safeTitle = (note.title || 'document').replace(/[^\w\s.-]/g, '').trim() || 'document';
 
     if (!isServerless) {
@@ -241,8 +253,8 @@ exports.serveNoteFile = async (req, res) => {
       if (filename) {
         const localFilePath = path.join(uploadsDir, filename);
         if (fs.existsSync(localFilePath)) {
-          res.setHeader('Content-Type', 'application/pdf');
-          res.setHeader('Content-Disposition', `inline; filename="${safeTitle}.pdf"`);
+          res.setHeader('Content-Type', mimeType);
+          res.setHeader('Content-Disposition', `inline; filename="${safeTitle}${ext}"`);
           return fs.createReadStream(localFilePath).pipe(res);
         }
       }
@@ -252,8 +264,8 @@ exports.serveNoteFile = async (req, res) => {
     if (remoteUrl) {
       const response = await fetch(remoteUrl);
       if (response.ok) {
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename="${safeTitle}.pdf"`);
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Content-Disposition', `inline; filename="${safeTitle}${ext}"`);
         const buffer = Buffer.from(await response.arrayBuffer());
         return res.send(buffer);
       }
@@ -262,8 +274,8 @@ exports.serveNoteFile = async (req, res) => {
     // Fallback: Try serving from database BYTEA/BLOB
     const dbFileData = await Note.getNoteFileData(req.params.id);
     if (dbFileData) {
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `inline; filename="${safeTitle}.pdf"`);
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Disposition', `inline; filename="${safeTitle}${ext}"`);
       return res.send(dbFileData);
     }
 
