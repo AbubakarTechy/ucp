@@ -21,7 +21,7 @@ It is built as a simple digital library to improve collaboration and make exam p
 
 ## 🛠️ Tech Stack
 
-- Frontend: React / HTML / CSS / JavaScript  
+- Frontend: React
 - Backend: Node.js, Express.js  
 - Database: MongoDB  
 - Authentication: Google OAuth + JWT  
