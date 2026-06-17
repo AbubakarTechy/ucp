@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
@@ -21,7 +21,9 @@ const AppLayout = () => {
   const location = useLocation();
   const isAdminLoginPage = location.pathname === '/admin/login';
   const isPricingPage = location.pathname === '/pricing';
-  const showPricingSection = !isAdminLoginPage && !isPricingPage;
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+  const isDashboardPage = location.pathname === '/dashboard';
+  const showPricingSection = !isAdminLoginPage && !isPricingPage && !isAuthPage && !isDashboardPage;
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
@@ -47,7 +49,7 @@ const AppLayout = () => {
 
       {!isAdminLoginPage && (
         <footer className="bg-slate-900 text-slate-400 py-12 px-4 sm:px-6 lg:px-8 border-t border-slate-800">
-          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
 
             <div className="space-y-3">
               <div className="flex items-center space-x-2 text-white">
@@ -79,6 +81,28 @@ const AppLayout = () => {
               </ul>
             </div>
 
+            {/* About the Author Card */}
+            <div className="bg-slate-800/40 border border-slate-800/80 rounded-2xl p-4 flex gap-4 items-center">
+              <img 
+                src="https://github.com/AbubakarTechy.png" 
+                alt="Author Profile" 
+                className="w-14 h-14 rounded-full border border-slate-700 object-cover flex-shrink-0" 
+                onError={(e) => {
+                  e.target.src = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80";
+                }}
+              />
+              <div className="space-y-1">
+                <h4 className="text-white font-extrabold text-xs uppercase tracking-wider">About the Author</h4>
+                <p className="text-[11px] text-slate-400 font-medium leading-normal">
+                  Designed and built with passion. Check out my profiles below:
+                </p>
+                <div className="flex gap-3 text-xs font-bold text-ucp-gold pt-0.5">
+                  <a href="https://linkedin.com/in/abubakartechy" target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-yellow-400">LinkedIn</a>
+                  <a href="https://github.com/AbubakarTechy" target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-yellow-400">GitHub</a>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-4 text-xs leading-relaxed text-slate-500">
               <p>
                 <span className="font-bold text-slate-400">Disclaimer:</span> This is a student-led collaborative community project and may not be officially affiliated with your university.
@@ -102,11 +126,22 @@ const AppLayout = () => {
   );
 };
 
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
+
 function App() {
   const appContent = (
     <AuthProvider>
       <AdminAuthProvider>
         <Router>
+          <ScrollToTop />
           <AppLayout />
         </Router>
       </AdminAuthProvider>
