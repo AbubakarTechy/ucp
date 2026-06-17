@@ -245,11 +245,18 @@ exports.googleLogin = async (req, res) => {
       return res.status(400).json({ message: 'Google credential is required.' });
     }
 
-    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    const googleClientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
+
+    if (!googleClientId) {
+      console.error('Google Client ID is not configured on the server (GOOGLE_CLIENT_ID and VITE_GOOGLE_CLIENT_ID are missing)');
+      return res.status(500).json({ message: 'Google Sign-in is not configured on the server.' });
+    }
+
+    const client = new OAuth2Client(googleClientId);
 
     const ticket = await client.verifyIdToken({
       idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID
+      audience: googleClientId
     });
 
     const payload = ticket.getPayload();
