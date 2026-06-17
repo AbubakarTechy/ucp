@@ -77,6 +77,7 @@ exports.uploadNote = async (req, res) => {
     let fileUrl = '';
     let cloudinaryUrl = '';
     let localFilename = '';
+    let fileData = null;
 
     if (isCloudinaryConfigured) {
       try {
@@ -85,23 +86,22 @@ exports.uploadNote = async (req, res) => {
         fileUrl = cloudinaryUrl;
       } catch (cloudinaryErr) {
         console.error('Cloudinary upload failed:', cloudinaryErr);
-        if (isServerless) {
-          return res.status(503).json({
-            message: 'File upload failed. Please verify Cloudinary credentials in your deployment settings.'
-          });
-        }
       }
     }
 
-    if (!cloudinaryUrl && !isServerless) {
-      localFilename = saveBufferLocally(req.file.buffer, req.file.originalname);
-      fileUrl = `${req.protocol}://${req.get('host')}/uploads/${localFilename}`;
+    if (!fileUrl && !isServerless) {
+      try {
+        localFilename = saveBufferLocally(req.file.buffer, req.file.originalname);
+        fileUrl = `${req.protocol}://${req.get('host')}/uploads/${localFilename}`;
+      } catch (localErr) {
+        console.error('Local file write failed:', localErr);
+      }
     }
 
     if (!fileUrl) {
-      return res.status(503).json({
-        message: 'File storage is not configured. Add Cloudinary environment variables before uploading on Vercel.'
-      });
+      // Fallback: store note PDF buffer directly in the SQLite database
+      fileData = req.file.buffer;
+      fileUrl = '/api/notes/db/file';
     }
 
     const newNote = Note.createNote({
@@ -114,7 +114,8 @@ exports.uploadNote = async (req, res) => {
       localFilename,
       uploadedBy: req.user.name,
       uploadedByEmail: req.user.email,
-      downloads: 0
+      downloads: 0,
+      fileData
     });
 
     res.status(201).json({
@@ -256,6 +257,14 @@ exports.serveNoteFile = async (req, res) => {
         const buffer = Buffer.from(await response.arrayBuffer());
         return res.send(buffer);
       }
+    }
+
+    // Fallback: Try serving from SQLite database BLOB
+    const dbFileData = Note.getNoteFileData(req.params.id);
+    if (dbFileData) {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${safeTitle}.pdf"`);
+      return res.send(dbFileData);
     }
 
     return res.status(404).json({

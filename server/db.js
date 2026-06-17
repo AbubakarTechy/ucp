@@ -11,7 +11,10 @@ function getDbPath() {
 
   if (process.env.VERCEL) {
     const tmpDbPath = '/tmp/campusnotes.db';
-    const seedDbPath = path.join(process.cwd(), 'server', 'data', 'campusnotes.db');
+    let seedDbPath = path.join(process.cwd(), 'server', 'data', 'campusnotes.db');
+    if (!fs.existsSync(seedDbPath)) {
+      seedDbPath = path.join(process.cwd(), 'data', 'campusnotes.db');
+    }
 
     if (!fs.existsSync(tmpDbPath)) {
       try {
@@ -19,7 +22,7 @@ function getDbPath() {
           fs.copyFileSync(seedDbPath, tmpDbPath);
           console.log(`Database successfully seeded from ${seedDbPath} to ${tmpDbPath}`);
         } else {
-          console.log(`Seed database not found at ${seedDbPath}. A new empty database will be initialized.`);
+          console.log(`Seed database not found. An empty database will be initialized at ${tmpDbPath}`);
         }
       } catch (err) {
         console.error('Error seeding database to /tmp:', err);
@@ -63,7 +66,8 @@ function initSchema(database) {
       uploaded_by TEXT NOT NULL,
       uploaded_by_email TEXT NOT NULL,
       downloads INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      file_data BLOB
     );
 
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -71,6 +75,17 @@ function initSchema(database) {
     CREATE INDEX IF NOT EXISTS idx_notes_semester ON notes(semester);
     CREATE INDEX IF NOT EXISTS idx_notes_uploaded_by_email ON notes(uploaded_by_email);
   `);
+
+  try {
+    const tableInfo = database.prepare("PRAGMA table_info(notes)").all();
+    const hasFileData = tableInfo.some(column => column.name === 'file_data');
+    if (!hasFileData) {
+      database.prepare("ALTER TABLE notes ADD COLUMN file_data BLOB").run();
+      console.log("Database schema migrated: added file_data BLOB column to notes table.");
+    }
+  } catch (err) {
+    console.error("Failed to migrate database schema:", err.message);
+  }
 }
 
 function connectDB() {

@@ -22,6 +22,8 @@ const formatNote = (row) => {
   };
 };
 
+const SELECT_FIELDS = 'id, title, subject, semester, type, file_url, cloudinary_url, local_filename, uploaded_by, uploaded_by_email, downloads, created_at';
+
 const getAllNotes = ({ sort = 'latest', limit } = {}) => {
   const db = connectDB();
   let orderBy = 'created_at DESC';
@@ -30,7 +32,7 @@ const getAllNotes = ({ sort = 'latest', limit } = {}) => {
     orderBy = 'downloads DESC';
   }
 
-  let sql = `SELECT * FROM notes ORDER BY ${orderBy}`;
+  let sql = `SELECT ${SELECT_FIELDS} FROM notes ORDER BY ${orderBy}`;
   const params = [];
 
   if (limit) {
@@ -44,8 +46,14 @@ const getAllNotes = ({ sort = 'latest', limit } = {}) => {
 
 const getNoteById = (id) => {
   const db = connectDB();
-  const row = db.prepare('SELECT * FROM notes WHERE id = ?').get(Number(id));
+  const row = db.prepare(`SELECT ${SELECT_FIELDS} FROM notes WHERE id = ?`).get(Number(id));
   return formatNote(row);
+};
+
+const getNoteFileData = (id) => {
+  const db = connectDB();
+  const row = db.prepare('SELECT file_data FROM notes WHERE id = ?').get(Number(id));
+  return row ? row.file_data : null;
 };
 
 const createNote = ({
@@ -58,16 +66,17 @@ const createNote = ({
   localFilename = '',
   uploadedBy,
   uploadedByEmail,
-  downloads = 0
+  downloads = 0,
+  fileData = null
 }) => {
   const db = connectDB();
   const result = db
     .prepare(`
       INSERT INTO notes (
         title, subject, semester, type, file_url, cloudinary_url, local_filename,
-        uploaded_by, uploaded_by_email, downloads
+        uploaded_by, uploaded_by_email, downloads, file_data
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     .run(
       title,
@@ -79,10 +88,17 @@ const createNote = ({
       localFilename,
       uploadedBy,
       uploadedByEmail.toLowerCase(),
-      downloads
+      downloads,
+      fileData
     );
 
-  return getNoteById(result.lastInsertRowid);
+  const newId = result.lastInsertRowid;
+  if (fileUrl === '/api/notes/db/file') {
+    const realFileUrl = `/api/notes/${newId}/file`;
+    db.prepare('UPDATE notes SET file_url = ? WHERE id = ?').run(realFileUrl, newId);
+  }
+
+  return getNoteById(newId);
 };
 
 const searchNotes = (query) => {
@@ -90,7 +106,7 @@ const searchNotes = (query) => {
   const pattern = `%${query}%`;
   const rows = db
     .prepare(`
-      SELECT * FROM notes
+      SELECT ${SELECT_FIELDS} FROM notes
       WHERE title LIKE ? COLLATE NOCASE OR subject LIKE ? COLLATE NOCASE
       ORDER BY created_at DESC
     `)
@@ -102,7 +118,7 @@ const searchNotes = (query) => {
 const getNotesBySemester = (semester) => {
   const db = connectDB();
   const rows = db
-    .prepare('SELECT * FROM notes WHERE semester = ? ORDER BY created_at DESC')
+    .prepare(`SELECT ${SELECT_FIELDS} FROM notes WHERE semester = ? ORDER BY created_at DESC`)
     .all(semester);
 
   return rows.map(formatNote);
@@ -111,7 +127,7 @@ const getNotesBySemester = (semester) => {
 const getNotesByUploaderEmail = (email) => {
   const db = connectDB();
   const rows = db
-    .prepare('SELECT * FROM notes WHERE uploaded_by_email = ? ORDER BY created_at DESC')
+    .prepare(`SELECT ${SELECT_FIELDS} FROM notes WHERE uploaded_by_email = ? ORDER BY created_at DESC`)
     .all(email.toLowerCase());
 
   return rows.map(formatNote);
@@ -132,6 +148,7 @@ const deleteNoteById = (id) => {
 module.exports = {
   getAllNotes,
   getNoteById,
+  getNoteFileData,
   createNote,
   searchNotes,
   getNotesBySemester,
