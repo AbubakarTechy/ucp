@@ -102,7 +102,7 @@ const Upload = () => {
       return;
     }
     if (!file) {
-      setError('Please select a PDF file to upload.');
+      setError('Please select a document file to upload (PDF, Word, or PowerPoint).');
       return;
     }
 

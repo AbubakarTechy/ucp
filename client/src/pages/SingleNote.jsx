@@ -14,6 +14,14 @@ const SingleNote = () => {
   const [downloadError, setDownloadError] = useState(null);
   const [downloading, setDownloading] = useState(false);
 
+  const getFileTypeText = () => {
+    const filename = note?.localFilename || note?.fileUrl || '';
+    if (/\.pdf$/i.test(filename)) return 'PDF';
+    if (/\.(docx|doc)$/i.test(filename)) return 'Word Document';
+    if (/\.(pptx|ppt)$/i.test(filename)) return 'PowerPoint';
+    return 'Document';
+  };
+
   useEffect(() => {
     const fetchNoteDetails = async () => {
       try {
@@ -154,7 +162,7 @@ const SingleNote = () => {
               </div>
 
               <div className="relative rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 h-[650px]">
-                {note.fileUrl && !/\.(docx|doc|pptx|ppt)$/i.test(note.fileUrl) ? (
+                {note.fileUrl && !/\.(docx|doc|pptx|ppt)$/i.test(note.localFilename || note.fileUrl || '') ? (
                   <iframe
                     src={`${getNoteFileUrl(note._id)}#toolbar=0`}
                     title={note.title}
@@ -213,7 +221,7 @@ const SingleNote = () => {
                   ) : (
                     <>
                       <Download className="h-5 w-5" />
-                      <span>{isAuthenticated ? 'Download PDF' : 'Sign in to Download'}</span>
+                      <span>{isAuthenticated ? `Download ${getFileTypeText()}` : 'Sign in to Download'}</span>
                     </>
                   )}
                 </button>

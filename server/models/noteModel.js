@@ -27,16 +27,18 @@ const SELECT_FIELDS = 'id, title, subject, semester, type, file_url, cloudinary_
 const getAllNotes = async ({ sort = 'latest', limit } = {}) => {
   const pool = await connectDB();
   let orderBy = 'created_at DESC';
+  let sql = `SELECT ${SELECT_FIELDS} FROM notes`;
+  const params = [];
 
   if (sort === 'downloads') {
+    sql += ' WHERE downloads > 0';
     orderBy = 'downloads DESC';
   }
 
-  let sql = `SELECT ${SELECT_FIELDS} FROM notes ORDER BY ${orderBy}`;
-  const params = [];
+  sql += ` ORDER BY ${orderBy}`;
 
   if (limit) {
-    sql += ' LIMIT $1';
+    sql += ` LIMIT $${params.length + 1}`;
     params.push(parseInt(limit, 10));
   }
 

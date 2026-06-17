@@ -30,7 +30,7 @@ const Home = () => {
         const popularRes = await fetch(`${API_URL}/api/notes?sort=downloads&limit=4`);
         if (!popularRes.ok) throw new Error('Failed to fetch popular notes');
         const popularData = await popularRes.json();
-        setPopularNotes(popularData);
+        setPopularNotes(popularData.filter(note => note.downloads > 0));
 
       } catch (err) {
         console.error('Error fetching home page data:', err);

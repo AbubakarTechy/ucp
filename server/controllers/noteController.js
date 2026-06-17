@@ -71,12 +71,12 @@ exports.uploadNote = async (req, res) => {
     }
 
     if (!req.file) {
-      return res.status(400).json({ message: 'Please upload a PDF file.' });
+      return res.status(400).json({ message: 'Please upload a valid document file (PDF, Word, or PowerPoint).' });
     }
 
     let fileUrl = '';
     let cloudinaryUrl = '';
-    let localFilename = '';
+    let localFilename = req.file.originalname || '';
     let fileData = null;
 
     if (isCloudinaryConfigured) {
@@ -247,6 +247,7 @@ exports.serveNoteFile = async (req, res) => {
 
     const { mimeType, ext } = getMimeTypeAndExt(note.localFilename || note.fileUrl || note.cloudinaryUrl);
     const safeTitle = (note.title || 'document').replace(/[^\w\s.-]/g, '').trim() || 'document';
+    const disposition = ext === '.pdf' ? 'inline' : 'attachment';
 
     if (!isServerless) {
       const filename = note.localFilename || (note.fileUrl.includes('/uploads/') ? note.fileUrl.split('/uploads/')[1] : '');
@@ -254,7 +255,7 @@ exports.serveNoteFile = async (req, res) => {
         const localFilePath = path.join(uploadsDir, filename);
         if (fs.existsSync(localFilePath)) {
           res.setHeader('Content-Type', mimeType);
-          res.setHeader('Content-Disposition', `inline; filename="${safeTitle}${ext}"`);
+          res.setHeader('Content-Disposition', `${disposition}; filename="${safeTitle}${ext}"`);
           return fs.createReadStream(localFilePath).pipe(res);
         }
       }
@@ -265,7 +266,7 @@ exports.serveNoteFile = async (req, res) => {
       const response = await fetch(remoteUrl);
       if (response.ok) {
         res.setHeader('Content-Type', mimeType);
-        res.setHeader('Content-Disposition', `inline; filename="${safeTitle}${ext}"`);
+        res.setHeader('Content-Disposition', `${disposition}; filename="${safeTitle}${ext}"`);
         const buffer = Buffer.from(await response.arrayBuffer());
         return res.send(buffer);
       }
@@ -275,7 +276,7 @@ exports.serveNoteFile = async (req, res) => {
     const dbFileData = await Note.getNoteFileData(req.params.id);
     if (dbFileData) {
       res.setHeader('Content-Type', mimeType);
-      res.setHeader('Content-Disposition', `inline; filename="${safeTitle}${ext}"`);
+      res.setHeader('Content-Disposition', `${disposition}; filename="${safeTitle}${ext}"`);
       return res.send(dbFileData);
     }
 
