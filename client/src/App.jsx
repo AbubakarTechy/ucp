@@ -20,10 +20,7 @@ import { GraduationCap, Heart } from 'lucide-react';
 const AppLayout = () => {
   const location = useLocation();
   const isAdminLoginPage = location.pathname === '/admin/login';
-  const isPricingPage = location.pathname === '/pricing';
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
-  const isDashboardPage = location.pathname === '/dashboard';
-  const showPricingSection = !isAdminLoginPage && !isPricingPage && !isAuthPage && !isDashboardPage;
+  const showPricingSection = location.pathname === '/';
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
@@ -102,8 +99,8 @@ const AppLayout = () => {
                   Designed and built with passion. Check out my profiles below:
                 </p>
                 <div className="flex gap-3 text-xs font-bold text-ucp-gold pt-0.5">
-                  <a href="https://linkedin.com/in/abubakartechy" target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-yellow-400">LinkedIn</a>
-                  <a href="https://github.com/AbubakarTechy" target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-yellow-400">GitHub</a>
+                  <a href="https://www.linkedin.com/in/abubakar-rasheed-294489275" target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-yellow-400">LinkedIn</a>
+                  <a href="https://github.com/AbubakarTechy/" target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-yellow-400">GitHub</a>
                 </div>
               </div>
             </div>
