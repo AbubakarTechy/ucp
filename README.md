@@ -5,7 +5,7 @@ CampusNotes is a full-stack university notes-sharing web application designed to
 It is built as a simple digital library to improve collaboration and make exam preparation easier for students.
 
 ---
-
+ 
 ## 🚀 Features
 
 - 🔐 User authentication (Email + Google Login)
